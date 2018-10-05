@@ -313,3 +313,4 @@ type PaymentData = {
 }
 
 type WsConnectionState = "connecting" | "connected" | "terminated"
+type BridgeMessage = 'close' | 'hello'
