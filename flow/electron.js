@@ -14,7 +14,7 @@ declare module 'electron' {
 		focus: () => void;
 		restore: () => void;
 		loadFile: (file: string) => void;
-		loadUrl: (url: string) => void;
+		loadURL: (url: string) => void;
 		isMinimized: () => boolean;
 		openDevTools: () => void;
 		webContents: WebContents;

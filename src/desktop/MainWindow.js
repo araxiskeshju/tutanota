@@ -52,6 +52,11 @@ export function createWindow(): BrowserWindow {
 		IPC.send('close')
 	})
 
+	IPC.on('get-argv', (dat) => {
+		console.log("sending process.argv: ", JSON.stringify(process.argv, null, 2))
+		IPC.send('write-console', JSON.stringify(process.argv, null, 2))
+	})
+
 	// handle navigation events. needed since webSecurity = true will
 	// prevent us from opening any local files directly
 	mainWindow.webContents.on('did-start-navigation', (e, url) => {
@@ -61,6 +66,9 @@ export function createWindow(): BrowserWindow {
 		}
 		e.preventDefault()
 	})
-	mainWindow.loadFile(startFile)
+	let mailto = process.argv[1] && process.argv[1].startsWith('mailto')
+		? "?requestedPath=%2Fmailto%23url%3D" + encodeURIComponent(process.argv[1])
+		: ""
+	mainWindow.loadURL(`file://${__dirname}/../../${startFile}${mailto}`)
 	return mainWindow
 }
