@@ -4,71 +4,85 @@ import {BrowserWindow} from 'electron'
 import open from './open'
 import path from 'path'
 
-const startFile = 'desktop.html'
+export class MainWindow {
+	_preventedAutoLogin: boolean;
+	_startFile: string;
+	_browserWindow: BrowserWindow;
 
-export function createWindow(): BrowserWindow {
-	let mainWindow = new BrowserWindow({
-		width: 1280,
-		height: 800,
-		autoHideMenuBar: true,
-		webPreferences: {
-			nodeIntegration: false,
-			nodeIntegrationInWorker: false,
-			// TODO: not a real os sandbox yet.
-			// https://github.com/electron-userland/electron-builder/issues/2562
-			// https://electronjs.org/docs/api/sandbox-option
-			sandbox: true,
-			contextIsolation: true,
-			webSecurity: true
-			//preload: './preload.js'
+	constructor() {
+		this._preventedAutoLogin = false
+		this._startFile = 'file://' + path.normalize(`${__dirname}/../../desktop.html`)
+		this._browserWindow = new BrowserWindow({
+			width: 1280,
+			height: 800,
+			autoHideMenuBar: true,
+			webPreferences: {
+				nodeIntegration: false,
+				nodeIntegrationInWorker: false,
+				// TODO: not a real os sandbox yet.
+				// https://github.com/electron-userland/electron-builder/issues/2562
+				// https://electronjs.org/docs/api/sandbox-option
+				sandbox: true,
+				// can't use contextIsolation because this will isolate
+				// the preload script from the web app
+				//contextIsolation: true,
+				webSecurity: true,
+				preload: path.join(__dirname, '/preload.js')
+			}
+		})
+
+		IPC.init(this._browserWindow)
+
+		this._browserWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+			const url = webContents.getURL()
+			if (!url.startsWith('https://mail.tutanota.com') || !(permission === 'notifications')) {
+				return callback(false)
+			}
+			return callback(true)
+		})
+
+		// we never open any new windows except for links in mails etc.
+		// so open them in the browser, not in electron
+		this._browserWindow.webContents.on('new-window', (e, url) => {
+			open(url);
+			e.preventDefault();
+		});
+
+		// should never be called, but if somehow a webview gets created
+		// we kill it
+		this._browserWindow.webContents.on('will-attach-webview', (e: Event, webPreferences, params) => {
+			e.preventDefault()
+		})
+
+		// user clicked 'x' button
+		this._browserWindow.on('close', () => {
+			IPC.send('close')
+		})
+
+		this._browserWindow.webContents.on('did-start-navigation', (e, url) => {
+			if (url === this._startFile + '/login?noAutoLogin=true' && !this._preventedAutoLogin) {
+				//prevent default on first navigation & load url ourselves
+				this._browserWindow.loadURL(this._startFile + '?noAutoLogin=true')
+				this._preventedAutoLogin = true;
+			} else if (url === this._startFile + '/login?noAutoLogin=true') {
+				// this one was triggered by loadURL above and will actually work
+				this._preventedAutoLogin = false
+				return
+			}
+			e.preventDefault()
+		})
+
+		const mailtoArg = process.argv.find((arg) => arg.startsWith('mailto'))
+		const mailtoPath = (mailtoArg)
+			? "?requestedPath=%2Fmailto%23url%3D" + encodeURIComponent(mailtoArg)
+			: ""
+		this._browserWindow.loadURL(`${this._startFile}${mailtoPath}`)
+	}
+
+	restoreAndFocus() {
+		if (this._browserWindow.isMinimized()) {
+			this._browserWindow.restore()
 		}
-	})
-
-	IPC.init(mainWindow)
-
-	mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-		const url = webContents.getURL()
-		if (!url.startsWith('https://mail.tutanota.com') || !(permission === 'notifications')) {
-			return callback(false)
-		}
-		return callback(true)
-	})
-
-	// we never open any new windows except for links in mails etc.
-	// so open them in the browser, not in electron
-	mainWindow.webContents.on('new-window', (e, url) => {
-		open(url);
-		e.preventDefault();
-	});
-
-	// should never be called, but if somehow a webview gets created
-	// we kill it
-	mainWindow.webContents.on('will-attach-webview', (e: Event, webPreferences, params) => {
-		e.preventDefault()
-	})
-
-	// user clicked 'x' button
-	mainWindow.on('close', () => {
-		IPC.send('close')
-	})
-
-	IPC.on('get-argv', (dat) => {
-		console.log("sending process.argv: ", JSON.stringify(process.argv, null, 2))
-		IPC.send('write-console', JSON.stringify(process.argv, null, 2))
-	})
-
-	// handle navigation events. needed since webSecurity = true will
-	// prevent us from opening any local files directly
-	mainWindow.webContents.on('did-start-navigation', (e, url) => {
-		//desktop.html after logout
-		if (url.endsWith('/login?noAutoLogin=true')) {
-			mainWindow.loadFile(startFile)
-		}
-		e.preventDefault()
-	})
-	let mailto = process.argv[1] && process.argv[1].startsWith('mailto')
-		? "?requestedPath=%2Fmailto%23url%3D" + encodeURIComponent(process.argv[1])
-		: ""
-	mainWindow.loadURL(`file://${__dirname}/../../${startFile}${mailto}`)
-	return mainWindow
+		this._browserWindow.focus()
+	}
 }

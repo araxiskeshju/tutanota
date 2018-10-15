@@ -1,10 +1,10 @@
 // @flow
-import {app, BrowserWindow} from 'electron'
+import {app} from 'electron'
 import electronDebug from 'electron-debug'
 import ElectronUpdater from './ElectronUpdater.js'
-import {createWindow} from './MainWindow'
+import {MainWindow} from './MainWindow'
 
-let mainWindow: BrowserWindow
+let mainWindow: MainWindow
 
 electronDebug({
 	enabled: true,
@@ -23,20 +23,17 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
 	if (mainWindow === null) {
-		mainWindow = createWindow()
+		mainWindow = new MainWindow()
 	}
 })
 
 app.on('second-instance', (e, argv, cwd) => {
 	if (mainWindow) {
-		if (mainWindow.isMinimized()) {
-			mainWindow.restore()
-		}
-		mainWindow.focus()
+		mainWindow.restoreAndFocus()
 	}
 })
 
 app.on('ready', () => {
-	mainWindow = createWindow()
+	mainWindow = new MainWindow()
 	ElectronUpdater.initAndCheck()
 })

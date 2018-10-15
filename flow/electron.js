@@ -10,13 +10,13 @@ declare module 'electron' {
 	declare class BrowserWindow {
 		// https://github.com/electron/electron/blob/master/docs/api/browser-window.md#new-browserwindowoptions
 		constructor(any): BrowserWindow;
-		on: (BrowserWindowEvent, (Event, ...Array<any>) => void) => void;
-		focus: () => void;
-		restore: () => void;
-		loadFile: (file: string) => void;
-		loadURL: (url: string) => void;
-		isMinimized: () => boolean;
-		openDevTools: () => void;
+		on(BrowserWindowEvent, (Event, ...Array<any>) => void): BrowserWindow;
+		focus(): void;
+		restore(): void;
+		loadFile(string): void;
+		loadURL(string): void;
+		isMinimized(): boolean;
+		openDevTools(): void;
 		webContents: WebContents;
 	}
 }
@@ -48,10 +48,10 @@ declare class AutoUpdater {
 }
 
 declare class WebContents {
-	on: (WebContentsEvent, (Event, ...Array<any>) => void) => void;
-	send: (BridgeMessage, any) => void;
+	on(WebContentsEvent, (Event, ...Array<any>) => void): WebContents;
+	send(BridgeMessage, any): void;
 	session: ElectronSession;
-	getURL: () => string
+	getURL(): string
 }
 
 type PermissionRequestHandler = (WebContents, ElectronPermission, (boolean) => void) => void;
