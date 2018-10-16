@@ -4,7 +4,7 @@
  * 2. copied to app-desktop/build/dist from dist.js (DesktopBuilder)
  */
 
-module.exports = function (nameSuffix, version, targetUrl, iconPath) {
+module.exports = function (nameSuffix, version, targetUrl, iconPath, sign) {
 	return {
 		"name": "tutanota-desktop" + nameSuffix,
 		"main": "./src/desktop/mainDesktop.js",
@@ -22,6 +22,9 @@ module.exports = function (nameSuffix, version, targetUrl, iconPath) {
 			"electron": "^3.0.0"
 		},
 		"build": {
+			//"afterPack": "./buildSrc/builderHook.js",
+			//"afterSign": "./buildSrc/builderHook.js",
+			//"afterAllArtifactBuild": "./buildSrc/builderHook.js",
 			"icon": iconPath,
 			"protocols": [
 				{
@@ -39,14 +42,16 @@ module.exports = function (nameSuffix, version, targetUrl, iconPath) {
 				"publishAutoUpdate": true
 			},
 			"appId": "de.tutao.tutanota",
-			"productName": "Tutanota Desktop" + nameSuffix,
+			"productName": nameSuffix.slice(1) + " Tutanota Desktop",
 			"artifactName": "${name}-${version}-${os}.${ext}",
 			"directories": {
 				"output": "installers"
 			},
 			"win": {
 				"publisherName": "Tutao GmbH",
-				"sign": "./buildSrc/winsigner.js",
+				"sign": sign
+					? "./buildSrc/winsigner.js"
+					: undefined,
 				"signingHashAlgorithms": [
 					"sha256"
 				],

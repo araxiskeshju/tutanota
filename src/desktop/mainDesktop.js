@@ -25,11 +25,12 @@ app.on('activate', () => {
 	if (mainWindow === null) {
 		mainWindow = new MainWindow()
 	}
+	mainWindow.show()
 })
 
 app.on('second-instance', (e, argv, cwd) => {
 	if (mainWindow) {
-		mainWindow.restoreAndFocus()
+		mainWindow.show(argv.find((arg) => arg.startsWith('mailto')))
 	}
 })
 

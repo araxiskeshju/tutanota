@@ -1,9 +1,11 @@
 declare module 'electron' {
 	declare var app: {
-		on: (AppEvent, (Event, ...Array<any>) => void) => void,
-		requestSingleInstanceLock(): () => void,
-		quit: () => void,
+		on(AppEvent, (Event, ...Array<any>) => void): void,
+		requestSingleInstanceLock(): void,
+		quit(): void,
+		getVersion(): string,
 	};
+	declare var remote: any;
 	declare var ipcRenderer: any;
 	declare var ipcMain: any;
 
@@ -13,6 +15,7 @@ declare module 'electron' {
 		on(BrowserWindowEvent, (Event, ...Array<any>) => void): BrowserWindow;
 		focus(): void;
 		restore(): void;
+		show(): void;
 		loadFile(string): void;
 		loadURL(string): void;
 		isMinimized(): boolean;
@@ -61,6 +64,7 @@ export type Bridge = {|
 	sendMessage: (msg: BridgeMessage, data: any) => void,
 	startListening: (msg: BridgeMessage, listener: Function) => void,
 	stopListening: (msg: BridgeMessage, listener: Function) => void,
+	getVersion: () => string,
 |}
 
 // https://github.com/electron/electron/blob/master/docs/api/app.md#events
@@ -178,5 +182,9 @@ export type AutoUpdaterEvent = 'error' |
 
 
 // Add Tutanota specific Messages here
-export type BridgeMessage = 'close'
+export type BridgeMessage
+	= 'window-close'    // user closed the client
+	| 'close-editor'    // try to close the mail editor
+	| 'editor-closed'   // editor was closed
+	| 'mailto'          // external navigation event
 

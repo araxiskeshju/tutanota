@@ -56,7 +56,7 @@ export class MainWindow {
 
 		// user clicked 'x' button
 		this._browserWindow.on('close', () => {
-			IPC.send('close')
+			IPC.send('close-editor')
 		})
 
 		this._browserWindow.webContents.on('did-start-navigation', (e, url) => {
@@ -65,24 +65,33 @@ export class MainWindow {
 				this._browserWindow.loadURL(this._startFile + '?noAutoLogin=true')
 				this._preventedAutoLogin = true;
 			} else if (url === this._startFile + '/login?noAutoLogin=true') {
-				// this one was triggered by loadURL above and will actually work
+				// this one was triggered by our loadURL above and will actually work
 				this._preventedAutoLogin = false
 				return
 			}
 			e.preventDefault()
 		})
 
-		const mailtoArg = process.argv.find((arg) => arg.startsWith('mailto'))
+		this._loadMailtoPath(process.argv.find((arg) => arg.startsWith('mailto')))
+	}
+
+	show(mailtoArg: ?string) {
+		if (this._browserWindow.isMinimized()) {
+			this._browserWindow.restore()
+			this._browserWindow.show()
+		} else {
+			this._browserWindow.focus()
+		}
+		if (mailtoArg) {
+			IPC.send('close-editor')
+			this._loadMailtoPath(mailtoArg)
+		}
+	}
+
+	_loadMailtoPath(mailtoArg: ?string): void {
 		const mailtoPath = (mailtoArg)
 			? "?requestedPath=%2Fmailto%23url%3D" + encodeURIComponent(mailtoArg)
 			: ""
 		this._browserWindow.loadURL(`${this._startFile}${mailtoPath}`)
-	}
-
-	restoreAndFocus() {
-		if (this._browserWindow.isMinimized()) {
-			this._browserWindow.restore()
-		}
-		this._browserWindow.focus()
 	}
 }

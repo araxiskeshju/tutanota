@@ -16,7 +16,8 @@ function build(dirname, version, targets, targetUrl, updateUrl, nameSuffix) {
 		nameSuffix,
 		version,
 		updateUrl,
-		path.join(dirname, "/resources/desktop-icons/desktop-icon.png")
+		path.join(dirname, "/resources/desktop-icons/desktop-icon.png"),
+		nameSuffix !== "-snapshot"
 	)
 	let writeConfig = fs.writeFileAsync("./build/dist/package.json", JSON.stringify(content), 'utf-8')
 
