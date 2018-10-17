@@ -3,7 +3,7 @@ const Builder = require('./Builder.js').Builder
 const fs = Promise.promisifyAll(require("fs-extra"))
 const path = require("path")
 
-function build(dirname, version, targets, targetUrl, updateUrl, nameSuffix) {
+function build(dirname, version, targets, updateUrl, nameSuffix) {
 	const targetString = Object.keys(targets)
 	                           .filter(k => typeof targets[k] !== "undefined")
 	                           .join(" ")

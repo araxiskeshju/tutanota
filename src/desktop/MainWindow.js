@@ -2,9 +2,10 @@
 import IPC from './IPC'
 import type {ElectronPermission} from 'electron'
 import {BrowserWindow, WebContents} from 'electron'
-import open from './open'
-import path from 'path'
 import * as localShortcut from 'electron-localshortcut'
+import open from './open'
+import {DesktopUtils} from './DesktopUtils.js'
+import path from 'path'
 
 export class MainWindow {
 	_rewroteURL: boolean;
@@ -13,7 +14,9 @@ export class MainWindow {
 
 	constructor() {
 		this._rewroteURL = false
-		this._startFile = 'file://' + path.normalize(`${__dirname}/../../desktop.html`)
+		let normalizedPath = path.join(__dirname, "..", "..", "desktop.html")
+		this._startFile = DesktopUtils.pathToFileURL(normalizedPath)
+		console.log("startFile: ", this._startFile)
 		this._browserWindow = new BrowserWindow({
 			width: 1280,
 			height: 800,
@@ -27,9 +30,9 @@ export class MainWindow {
 				sandbox: true,
 				// can't use contextIsolation because this will isolate
 				// the preload script from the web app
-				//contextIsolation: true,
+				// contextIsolation: true,
 				webSecurity: true,
-				preload: path.join(__dirname, '/preload.js')
+				preload: path.join(__dirname, 'preload.js')
 			}
 		})
 
@@ -114,10 +117,11 @@ export class MainWindow {
 	}
 
 	_toggleDevTools(): void {
-		if (this._browserWindow.webContents.isDevToolsOpened()) {
-			this._browserWindow.webContents.closeDevTools()
+		const wc = this._browserWindow.webContents
+		if (wc.isDevToolsOpened()) {
+			wc.closeDevTools()
 		} else {
-			this._browserWindow.webContents.openDevTools({mode: 'undocked'})
+			wc.openDevTools({mode: 'undocked'})
 		}
 	}
 
