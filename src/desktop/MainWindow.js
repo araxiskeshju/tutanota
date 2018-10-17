@@ -1,16 +1,18 @@
 // @flow
 import IPC from './IPC'
-import {BrowserWindow} from 'electron'
+import type {ElectronPermission} from 'electron'
+import {BrowserWindow, WebContents} from 'electron'
 import open from './open'
 import path from 'path'
+import * as localShortcut from 'electron-localshortcut'
 
 export class MainWindow {
-	_preventedAutoLogin: boolean;
+	_rewroteURL: boolean;
 	_startFile: string;
 	_browserWindow: BrowserWindow;
 
 	constructor() {
-		this._preventedAutoLogin = false
+		this._rewroteURL = false
 		this._startFile = 'file://' + path.normalize(`${__dirname}/../../desktop.html`)
 		this._browserWindow = new BrowserWindow({
 			width: 1280,
@@ -33,44 +35,36 @@ export class MainWindow {
 
 		IPC.init(this._browserWindow)
 
-		this._browserWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-			const url = webContents.getURL()
-			if (!url.startsWith('https://mail.tutanota.com') || !(permission === 'notifications')) {
-				return callback(false)
-			}
-			return callback(true)
-		})
-
-		// we never open any new windows except for links in mails etc.
-		// so open them in the browser, not in electron
-		this._browserWindow.webContents.on('new-window', (e, url) => {
-			open(url);
-			e.preventDefault();
-		});
-
-		// should never be called, but if somehow a webview gets created
-		// we kill it
-		this._browserWindow.webContents.on('will-attach-webview', (e: Event, webPreferences, params) => {
-			e.preventDefault()
-		})
-
 		// user clicked 'x' button
-		this._browserWindow.on('close', () => {
-			IPC.send('close-editor')
-		})
+		this._browserWindow
+		    .on('close', () => {
+			    IPC.send('close-editor')
+		    })
 
-		this._browserWindow.webContents.on('did-start-navigation', (e, url) => {
-			if (url === this._startFile + '/login?noAutoLogin=true' && !this._preventedAutoLogin) {
-				//prevent default on first navigation & load url ourselves
-				this._browserWindow.loadURL(this._startFile + '?noAutoLogin=true')
-				this._preventedAutoLogin = true;
-			} else if (url === this._startFile + '/login?noAutoLogin=true') {
-				// this one was triggered by our loadURL above and will actually work
-				this._preventedAutoLogin = false
-				return
-			}
-			e.preventDefault()
-		})
+		this._browserWindow.webContents.session.setPermissionRequestHandler(this._permissionRequestHandler)
+
+		this._browserWindow.webContents
+		    .on('new-window', (e, url) => {
+			    // we never open any new windows except for links in mails etc.
+			    // so open them in the browser, not in electron
+			    open(url)
+			    e.preventDefault()
+		    })
+		    .on('will-attach-webview', (e: Event, webPreferences, params) => {
+			    // should never be called, but if somehow a webview gets created
+			    // we kill it
+			    e.preventDefault()
+		    })
+		    .on('did-start-navigation', (e, url, isInPlace) => {
+			    const newURL = this._rewriteURL(url, isInPlace)
+			    if (newURL !== url) {
+				    e.preventDefault()
+				    this._browserWindow.loadURL(newURL)
+			    }
+		    })
+
+		localShortcut.register('F12', () => this._toggleDevTools())
+		localShortcut.register('F5', () => this._browserWindow.loadURL(this._startFile))
 
 		this._loadMailtoPath(process.argv.find((arg) => arg.startsWith('mailto')))
 	}
@@ -88,10 +82,46 @@ export class MainWindow {
 		}
 	}
 
+	// filesystem paths work differently than URLs
+	_rewriteURL(url: string, isInPlace: boolean): string {
+		if (!url.startsWith(this._startFile)) {
+			return this._startFile
+		}
+		if (url === this._startFile + '/login?noAutoLogin=true' && isInPlace) {
+			if (!this._rewroteURL) {
+				this._rewroteURL = true
+				return this._startFile + '?noAutoLogin=true'
+			} else {
+				this._rewroteURL = false
+			}
+		}
+		return url
+	}
+
+	_permissionRequestHandler(webContents: WebContents, permission: ElectronPermission, callback: (boolean) => void) {
+		const url = webContents.getURL()
+		if (!url.startsWith('https://mail.tutanota.com') || !(permission === 'notifications')) {
+			return callback(false)
+		}
+		return callback(true)
+	}
+
 	_loadMailtoPath(mailtoArg: ?string): void {
 		const mailtoPath = (mailtoArg)
 			? "?requestedPath=%2Fmailto%23url%3D" + encodeURIComponent(mailtoArg)
 			: ""
 		this._browserWindow.loadURL(`${this._startFile}${mailtoPath}`)
+	}
+
+	_toggleDevTools(): void {
+		if (this._browserWindow.webContents.isDevToolsOpened()) {
+			this._browserWindow.webContents.closeDevTools()
+		} else {
+			this._browserWindow.webContents.openDevTools({mode: 'undocked'})
+		}
+	}
+
+	_refresh(): void {
+		this._browserWindow.webContents.reloadIgnoringCache()
 	}
 }

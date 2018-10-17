@@ -1,15 +1,15 @@
 declare module 'electron' {
-	declare var app: {
+	declare export var app: {
 		on(AppEvent, (Event, ...Array<any>) => void): void,
 		requestSingleInstanceLock(): void,
 		quit(): void,
 		getVersion(): string,
 	};
-	declare var remote: any;
-	declare var ipcRenderer: any;
-	declare var ipcMain: any;
+	declare export var remote: any;
+	declare export var ipcRenderer: any;
+	declare export var ipcMain: any;
 
-	declare class BrowserWindow {
+	declare export class BrowserWindow {
 		// https://github.com/electron/electron/blob/master/docs/api/browser-window.md#new-browserwindowoptions
 		constructor(any): BrowserWindow;
 		on(BrowserWindowEvent, (Event, ...Array<any>) => void): BrowserWindow;
@@ -22,20 +22,48 @@ declare module 'electron' {
 		openDevTools(): void;
 		webContents: WebContents;
 	}
+
+	declare export class WebContents {
+		on(WebContentsEvent, (Event, ...Array<any>) => void): WebContents;
+		send(BridgeMessage, any): void;
+		session: ElectronSession;
+		getURL(): string;
+		openDevTools({|mode: string|}): void;
+		isDevToolsOpened(): boolean;
+		closeDevTools(): void;
+		reloadIgnoringCache(): void;
+	}
+
+	declare export class ElectronSession {
+		setPermissionRequestHandler: (PermissionRequestHandler | null) => void;
+	}
+
+	declare export type PermissionRequestHandler = (WebContents, ElectronPermission, (boolean) => void) => void;
+	declare export type ElectronPermission
+		= 'media'
+		| 'geolocation'
+		| 'notifications'
+		| 'midiSysex'
+		| 'pointerLock'
+		| 'fullscreen'
+		| 'openExternal';
 }
 
 declare module 'electron-updater' {
 	declare export var autoUpdater: AutoUpdater
 }
 
-declare module 'electron-debug' {
-	declare export default typeof Function;
+declare module 'electron-localshortcut' {
+	declare module .exports: {
+		register(shortcut: string, cb: Function): void;
+		unregister(shortcut: string): void;
+		isRegistered(shortcut: string): boolean;
+		unregisterAll(): void;
+		enableAll(): void;
+		disableAll(): void;
+	}
+;
 }
-
-declare class ElectronSession {
-	setPermissionRequestHandler: (PermissionRequestHandler | null) => void;
-}
-
 
 declare class AutoUpdater {
 	on: (AutoUpdaterEvent, (Event, ...Array<any>) => void) => void;
@@ -49,16 +77,6 @@ declare class AutoUpdater {
 	};
 	checkForUpdatesAndNotify: () => Promise<any>
 }
-
-declare class WebContents {
-	on(WebContentsEvent, (Event, ...Array<any>) => void): WebContents;
-	send(BridgeMessage, any): void;
-	session: ElectronSession;
-	getURL(): string
-}
-
-type PermissionRequestHandler = (WebContents, ElectronPermission, (boolean) => void) => void;
-type ElectronPermission = 'media' | 'geolocation' | 'notifications' | 'midiSysex' | 'pointerLock' | 'fullscreen' | 'openExternal';
 
 export type Bridge = {|
 	sendMessage: (msg: BridgeMessage, data: any) => void,
